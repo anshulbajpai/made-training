@@ -39,7 +39,25 @@ class TodoController @Inject()(val controllerComponents: ControllerComponents,
       description = createTodoRequest.description
     )
     todos += todo
-    Created.withHeaders(HeaderNames.LOCATION -> routes.TodoController.get(todo.id).url)
+    Created.withHeaders(
+      HeaderNames.LOCATION -> routes.TodoController.get(todo.id).url
+    )
+  }
+
+  def update(id: String): Action[JsValue] = Action(parse.json) { request =>
+    val createTodoRequest: CreateTodoRequest =
+      request.body.as[CreateTodoRequest]
+    todos.find(_.id == id) match {
+      case Some(originalTodo) =>
+        val newTodo = originalTodo.copy(
+          title = createTodoRequest.title,
+          description = createTodoRequest.description
+        )
+        todos -= originalTodo
+        todos += newTodo
+        NoContent
+      case None => NotFound
+    }
   }
 
   def get(id: String) = Action {
@@ -47,4 +65,11 @@ class TodoController @Inject()(val controllerComponents: ControllerComponents,
     maybeTodo.fold(NotFound: Result)(todo => Ok(Json.toJson(todo)))
   }
 
+  def delete(id: String) = Action {
+    val maybeTodo = todos.find(_.id == id)
+    maybeTodo.fold(NotFound: Result) { todo =>
+      todos -= todo
+      NoContent
+    }
+  }
 }

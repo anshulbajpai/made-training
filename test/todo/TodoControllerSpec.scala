@@ -107,4 +107,66 @@ class TodoControllerSpec extends WordSpec with MustMatchers with OptionValues {
           |""".stripMargin)
     }
   }
+
+  "delete" must {
+    "return a Not found if no matching todo" in {
+      val controller =
+        new TodoController(Helpers.stubControllerComponents(), ListBuffer.empty)
+
+      val response = controller.delete(randomUUID().toString)(FakeRequest())
+
+      status(response) mustBe NOT_FOUND
+    }
+
+    "delete the matching todo" in {
+      val todoId = randomUUID().toString
+      val todo = Todo(todoId, "todo title", "todo description")
+
+      val todos = ListBuffer(todo)
+
+      val controller =
+        new TodoController(Helpers.stubControllerComponents(), todos)
+
+      val response = controller.delete(todoId)(FakeRequest())
+
+      status(response) mustBe NO_CONTENT
+      todos mustBe empty
+    }
+  }
+
+  "update" must {
+    "return a Not found if no matching todo" in {
+      val controller =
+        new TodoController(Helpers.stubControllerComponents(), ListBuffer.empty)
+
+      val updateJson = Json.obj(
+        "title" -> "updated title",
+        "description" -> "updated description"
+      )
+
+      val response = controller.update(randomUUID().toString)(FakeRequest().withBody(updateJson))
+
+      status(response) mustBe NOT_FOUND
+    }
+
+    "update the existing todo to new values" in {
+      val todoId = randomUUID().toString
+      val todo = Todo(todoId, "todo title", "todo description")
+
+      val todos = ListBuffer(todo)
+
+      val controller =
+        new TodoController(Helpers.stubControllerComponents(), todos)
+
+      val updateJson = Json.obj(
+        "title" -> "updated title",
+        "description" -> "updated description"
+      )
+
+      val response = controller.update(todoId)(FakeRequest().withBody(updateJson))
+
+      status(response) mustBe NO_CONTENT
+      todos mustBe List(Todo(todoId, "updated title", "updated description"))
+    }
+  }
 }
