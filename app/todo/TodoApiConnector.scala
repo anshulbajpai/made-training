@@ -1,6 +1,7 @@
 package todo
 
 import play.api.Configuration
+import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Json
 import play.api.libs.ws.{WSClient, WSResponse}
 
@@ -24,7 +25,12 @@ class TodoApiConnector @Inject()(
     responseFut.map { response =>
       response.json.as[List[Todo]]
     }
+  }
 
+  def get(id: String): Future[Option[Todo]] = {
+    wsClient.url(s"$apiBaseUrl/todos/$id").get().map { response =>
+      if (response.status == NOT_FOUND) None else Some(response.json.as[Todo])
+    }
   }
 
 }
