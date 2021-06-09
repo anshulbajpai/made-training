@@ -7,3 +7,11 @@ target
 /.project
 /.settings
 /RUNNING_PID
+
+/.vscode
+
+.metals/
+.ammonite/
+metals.sbt
+metals/project/
+**/.bloop
