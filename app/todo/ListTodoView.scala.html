@@ -1,0 +1,13 @@
+@import todo.Todo
+@import todo.routes._
+
+
+@this()
+
+@(todos: List[Todo])
+<h1>TODOs</h1>
+<ul>
+    @for(todo <- todos) {
+    <li><a href="@TodoFrontendController.get(todo.id)">@todo.title</a></li>
+    }
+</ul>
