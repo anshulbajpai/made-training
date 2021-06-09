@@ -8,7 +8,10 @@ lazy val root = (project in file(".")).enablePlugins(PlayScala)
 scalaVersion := "2.12.14"
 
 libraryDependencies += guice
+libraryDependencies += "uk.gov.hmrc" %% "simple-reactivemongo" % "8.0.0-play-28"
 libraryDependencies += "org.scalatestplus.play" %% "scalatestplus-play" % "5.0.0" % Test
+
+resolvers += MavenRepository("HMRC-open-artefacts-maven2", "https://open.artefacts.tax.service.gov.uk/maven2")
 
 // Adds additional packages into Twirl
 //TwirlKeys.templateImports += "madetech.controllers._"
