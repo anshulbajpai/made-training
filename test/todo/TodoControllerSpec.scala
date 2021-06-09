@@ -11,8 +11,8 @@ import play.api.test.{FakeRequest, Helpers}
 
 import java.util.UUID.randomUUID
 import scala.collection.mutable.ListBuffer
-import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 class TodoControllerSpec extends WordSpec with MustMatchers with OptionValues with MockitoSugar with BeforeAndAfterEach {
 
@@ -26,7 +26,7 @@ class TodoControllerSpec extends WordSpec with MustMatchers with OptionValues wi
   "list" must {
     "return no todos if there are no todo yet" in {
       val controller =
-        new TodoController(Helpers.stubControllerComponents(), ListBuffer.empty, mockRepo)
+        new TodoController(Helpers.stubControllerComponents(), mockRepo)
 
       when(mockRepo.list()).thenReturn(Future.successful(List.empty))
 
@@ -49,7 +49,7 @@ class TodoControllerSpec extends WordSpec with MustMatchers with OptionValues wi
       )
 
       val controller =
-        new TodoController(Helpers.stubControllerComponents(), ListBuffer.empty, mockRepo)
+        new TodoController(Helpers.stubControllerComponents(), mockRepo)
 
       when(mockRepo.list()).thenReturn(Future.successful(List(todo1, todo2)))
 
@@ -71,12 +71,17 @@ class TodoControllerSpec extends WordSpec with MustMatchers with OptionValues wi
     "create a new todo and return its location" in {
       val todos = ListBuffer.empty[Todo]
       val controller =
-        new TodoController(Helpers.stubControllerComponents(), todos, mockRepo)
+        new TodoController(Helpers.stubControllerComponents(), mockRepo)
 
       val todoJson = Json.obj(
         "title" -> "first todo",
         "description" -> "first todo description"
       )
+
+      val todoId = randomUUID().toString
+
+      when(mockRepo.create("first todo", "first todo description"))
+        .thenReturn(Future.successful(todoId))
 
       val response: Future[Result] =
         controller.create(FakeRequest().withBody(todoJson))
@@ -85,22 +90,20 @@ class TodoControllerSpec extends WordSpec with MustMatchers with OptionValues wi
 
       val locationHeader: String = header(HeaderNames.LOCATION, response).value
       val todoIdRegex = "^/api/todos/(.*)$".r
-      val todoIdRegex(todoId) = locationHeader
-      todos mustBe ListBuffer(
-        Todo(
-          id = todoId,
-          title = "first todo",
-          description = "first todo description"
-        )
-      )
+      val todoIdRegex(todoIdInHeader) = locationHeader
+      todoIdInHeader mustBe todoId
     }
   }
 
   "get" must {
     "return NotFound if there are no todos matching the requested id" in {
       val controller =
-        new TodoController(Helpers.stubControllerComponents(), ListBuffer.empty, mockRepo)
+        new TodoController(Helpers.stubControllerComponents(), mockRepo)
+
       val id = randomUUID().toString
+
+      when(mockRepo.get(id)).thenReturn(Future.successful(None))
+
       val response = controller.get(id)(FakeRequest())
 
       status(response) mustBe NOT_FOUND
@@ -111,7 +114,9 @@ class TodoControllerSpec extends WordSpec with MustMatchers with OptionValues wi
       val todo = Todo(todoId, "todo title", "todo description")
 
       val controller =
-        new TodoController(Helpers.stubControllerComponents(), ListBuffer(todo), mockRepo)
+        new TodoController(Helpers.stubControllerComponents(), mockRepo)
+
+      when(mockRepo.get(todoId)).thenReturn(Future.successful(Some(todo)))
 
       val response = controller.get(todoId)(FakeRequest())
 
@@ -124,39 +129,41 @@ class TodoControllerSpec extends WordSpec with MustMatchers with OptionValues wi
 
   "delete" must {
     "return a Not found if no matching todo" in {
+      val todoId = randomUUID().toString
       val controller =
-        new TodoController(Helpers.stubControllerComponents(), ListBuffer.empty, mockRepo)
+        new TodoController(Helpers.stubControllerComponents(), mockRepo)
 
-      val response = controller.delete(randomUUID().toString)(FakeRequest())
+      when(mockRepo.delete(todoId)).thenReturn(Future.successful(false))
+
+      val response = controller.delete(todoId)(FakeRequest())
 
       status(response) mustBe NOT_FOUND
     }
 
     "delete the matching todo" in {
       val todoId = randomUUID().toString
-      val todo = Todo(todoId, "todo title", "todo description")
-
-      val todos = ListBuffer(todo)
-
       val controller =
-        new TodoController(Helpers.stubControllerComponents(), todos, mockRepo)
+        new TodoController(Helpers.stubControllerComponents(), mockRepo)
+
+      when(mockRepo.delete(todoId)).thenReturn(Future.successful(true))
 
       val response = controller.delete(todoId)(FakeRequest())
 
       status(response) mustBe NO_CONTENT
-      todos mustBe empty
     }
   }
 
   "update" must {
     "return a Not found if no matching todo" in {
       val controller =
-        new TodoController(Helpers.stubControllerComponents(), ListBuffer.empty, mockRepo)
+        new TodoController(Helpers.stubControllerComponents(), mockRepo)
 
       val updateJson = Json.obj(
         "title" -> "updated title",
         "description" -> "updated description"
       )
+
+      when(mockRepo.update(Todo(randomUUID().toString, "don't care", "don't care"))).thenReturn(Future.successful(false))
 
       val response = controller.update(randomUUID().toString)(FakeRequest().withBody(updateJson))
 
@@ -165,22 +172,18 @@ class TodoControllerSpec extends WordSpec with MustMatchers with OptionValues wi
 
     "update the existing todo to new values" in {
       val todoId = randomUUID().toString
-      val todo = Todo(todoId, "todo title", "todo description")
-
-      val todos = ListBuffer(todo)
-
       val controller =
-        new TodoController(Helpers.stubControllerComponents(), todos, mockRepo)
+        new TodoController(Helpers.stubControllerComponents(), mockRepo)
 
       val updateJson = Json.obj(
         "title" -> "updated title",
         "description" -> "updated description"
       )
+      when(mockRepo.update(Todo(todoId, "updated title", "updated description"))).thenReturn(Future.successful(true))
 
       val response = controller.update(todoId)(FakeRequest().withBody(updateJson))
 
       status(response) mustBe NO_CONTENT
-      todos mustBe List(Todo(todoId, "updated title", "updated description"))
     }
   }
 }

@@ -2,11 +2,9 @@ package todo
 
 import play.api.http.HeaderNames
 import play.api.libs.json.{JsValue, Json}
-import play.api.mvc.{Action, AnyContent, BaseController, ControllerComponents, Result}
+import play.api.mvc._
 
-import java.util.UUID.randomUUID
 import javax.inject.{Inject, Singleton}
-import scala.collection.mutable.ListBuffer
 import scala.concurrent.{ExecutionContext, Future}
 
 case class Todo(id: String, title: String, description: String)
@@ -14,8 +12,7 @@ case class Todo(id: String, title: String, description: String)
 case class CreateTodoRequest(title: String, description: String)
 
 @Singleton
-class TodoController @Inject()(val controllerComponents: ControllerComponents,
-                               todos: ListBuffer[Todo], repository: MongoTodoRepository)(implicit ec: ExecutionContext)
+class TodoController @Inject()(val controllerComponents: ControllerComponents, repository: MongoTodoRepository)(implicit ec: ExecutionContext)
     extends BaseController {
 
   private implicit val todoWrites = Json.writes[Todo]
@@ -28,46 +25,44 @@ class TodoController @Inject()(val controllerComponents: ControllerComponents,
     result
   }
 
-  val create: Action[JsValue] = Action(parse.json) { request =>
+  val create: Action[JsValue] = Action(parse.json).async { request =>
     val createTodoRequest: CreateTodoRequest =
       request.body.as[CreateTodoRequest]
-    val todo = Todo(
-      id = randomUUID().toString,
-      title = createTodoRequest.title,
-      description = createTodoRequest.description
-    )
-    todos += todo
-    Created.withHeaders(
-      HeaderNames.LOCATION -> routes.TodoController.get(todo.id).url
-    )
+
+    val idFut: Future[String] = repository.create(createTodoRequest.title, createTodoRequest.description)
+
+    idFut.map { id =>
+      Created.withHeaders(
+        HeaderNames.LOCATION -> routes.TodoController.get(id).url
+      )
+    }
   }
 
-  def update(id: String): Action[JsValue] = Action(parse.json) { request =>
+  def update(id: String): Action[JsValue] = Action(parse.json).async { request =>
     val createTodoRequest: CreateTodoRequest =
       request.body.as[CreateTodoRequest]
-    todos.find(_.id == id) match {
-      case Some(originalTodo) =>
-        val newTodo = originalTodo.copy(
-          title = createTodoRequest.title,
-          description = createTodoRequest.description
-        )
-        todos -= originalTodo
-        todos += newTodo
-        NoContent
+
+    repository.update(Todo(id, createTodoRequest.title, createTodoRequest.description)).map {
+      case true => NoContent
+      case false => NotFound
+    }
+  }
+
+  def get(id: String) = Action.async {
+    val maybeTodoFut: Future[Option[Todo]] = repository.get(id)
+
+    maybeTodoFut.map {
+      case Some(todo) => Ok(Json.toJson(todo))
       case None => NotFound
     }
   }
 
-  def get(id: String) = Action {
-    val maybeTodo = todos.find(_.id == id)
-    maybeTodo.fold(NotFound: Result)(todo => Ok(Json.toJson(todo)))
-  }
+  def delete(id: String) = Action.async {
+    val maybeDeletedFut: Future[Boolean] = repository.delete(id)
 
-  def delete(id: String) = Action {
-    val maybeTodo = todos.find(_.id == id)
-    maybeTodo.fold(NotFound: Result) { todo =>
-      todos -= todo
-      NoContent
+    maybeDeletedFut.map {
+      case true => NoContent
+      case false => NotFound
     }
   }
 }
