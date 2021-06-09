@@ -1,6 +1,7 @@
 package todo
 
-import org.scalatest.{MustMatchers, OptionValues, WordSpec}
+import org.mockito.{Mockito, MockitoSugar}
+import org.scalatest.{BeforeAndAfterEach, MustMatchers, OptionValues, WordSpec}
 import play.api.http.HeaderNames
 import play.api.http.Status._
 import play.api.libs.json.Json
@@ -11,13 +12,24 @@ import play.api.test.{FakeRequest, Helpers}
 import java.util.UUID.randomUUID
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext.Implicits.global
 
-class TodoControllerSpec extends WordSpec with MustMatchers with OptionValues {
+class TodoControllerSpec extends WordSpec with MustMatchers with OptionValues with MockitoSugar with BeforeAndAfterEach {
+
+  val mockRepo = mock[MongoTodoRepository]
+
+  override protected def beforeEach(): Unit = {
+    super.beforeEach()
+    Mockito.reset(mockRepo)
+  }
 
   "list" must {
     "return no todos if there are no todo yet" in {
       val controller =
-        new TodoController(Helpers.stubControllerComponents(), ListBuffer.empty)
+        new TodoController(Helpers.stubControllerComponents(), ListBuffer.empty, mockRepo)
+
+      when(mockRepo.list()).thenReturn(Future.successful(List.empty))
+
       val response: Future[Result] = controller.list(FakeRequest())
 
       status(response) mustBe OK
@@ -35,9 +47,11 @@ class TodoControllerSpec extends WordSpec with MustMatchers with OptionValues {
         title = "second todo",
         description = "second todo description"
       )
-      val todos = ListBuffer(todo1, todo2)
+
       val controller =
-        new TodoController(Helpers.stubControllerComponents(), todos)
+        new TodoController(Helpers.stubControllerComponents(), ListBuffer.empty, mockRepo)
+
+      when(mockRepo.list()).thenReturn(Future.successful(List(todo1, todo2)))
 
       val response: Future[Result] = controller.list(FakeRequest())
 
@@ -57,7 +71,7 @@ class TodoControllerSpec extends WordSpec with MustMatchers with OptionValues {
     "create a new todo and return its location" in {
       val todos = ListBuffer.empty[Todo]
       val controller =
-        new TodoController(Helpers.stubControllerComponents(), todos)
+        new TodoController(Helpers.stubControllerComponents(), todos, mockRepo)
 
       val todoJson = Json.obj(
         "title" -> "first todo",
@@ -85,7 +99,7 @@ class TodoControllerSpec extends WordSpec with MustMatchers with OptionValues {
   "get" must {
     "return NotFound if there are no todos matching the requested id" in {
       val controller =
-        new TodoController(Helpers.stubControllerComponents(), ListBuffer.empty)
+        new TodoController(Helpers.stubControllerComponents(), ListBuffer.empty, mockRepo)
       val id = randomUUID().toString
       val response = controller.get(id)(FakeRequest())
 
@@ -97,7 +111,7 @@ class TodoControllerSpec extends WordSpec with MustMatchers with OptionValues {
       val todo = Todo(todoId, "todo title", "todo description")
 
       val controller =
-        new TodoController(Helpers.stubControllerComponents(), ListBuffer(todo))
+        new TodoController(Helpers.stubControllerComponents(), ListBuffer(todo), mockRepo)
 
       val response = controller.get(todoId)(FakeRequest())
 
@@ -111,7 +125,7 @@ class TodoControllerSpec extends WordSpec with MustMatchers with OptionValues {
   "delete" must {
     "return a Not found if no matching todo" in {
       val controller =
-        new TodoController(Helpers.stubControllerComponents(), ListBuffer.empty)
+        new TodoController(Helpers.stubControllerComponents(), ListBuffer.empty, mockRepo)
 
       val response = controller.delete(randomUUID().toString)(FakeRequest())
 
@@ -125,7 +139,7 @@ class TodoControllerSpec extends WordSpec with MustMatchers with OptionValues {
       val todos = ListBuffer(todo)
 
       val controller =
-        new TodoController(Helpers.stubControllerComponents(), todos)
+        new TodoController(Helpers.stubControllerComponents(), todos, mockRepo)
 
       val response = controller.delete(todoId)(FakeRequest())
 
@@ -137,7 +151,7 @@ class TodoControllerSpec extends WordSpec with MustMatchers with OptionValues {
   "update" must {
     "return a Not found if no matching todo" in {
       val controller =
-        new TodoController(Helpers.stubControllerComponents(), ListBuffer.empty)
+        new TodoController(Helpers.stubControllerComponents(), ListBuffer.empty, mockRepo)
 
       val updateJson = Json.obj(
         "title" -> "updated title",
@@ -156,7 +170,7 @@ class TodoControllerSpec extends WordSpec with MustMatchers with OptionValues {
       val todos = ListBuffer(todo)
 
       val controller =
-        new TodoController(Helpers.stubControllerComponents(), todos)
+        new TodoController(Helpers.stubControllerComponents(), todos, mockRepo)
 
       val updateJson = Json.obj(
         "title" -> "updated title",

@@ -2,17 +2,12 @@ package todo
 
 import play.api.http.HeaderNames
 import play.api.libs.json.{JsValue, Json}
-import play.api.mvc.{
-  Action,
-  AnyContent,
-  BaseController,
-  ControllerComponents,
-  Result
-}
+import play.api.mvc.{Action, AnyContent, BaseController, ControllerComponents, Result}
 
 import java.util.UUID.randomUUID
 import javax.inject.{Inject, Singleton}
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.{ExecutionContext, Future}
 
 case class Todo(id: String, title: String, description: String)
 
@@ -20,14 +15,17 @@ case class CreateTodoRequest(title: String, description: String)
 
 @Singleton
 class TodoController @Inject()(val controllerComponents: ControllerComponents,
-                               todos: ListBuffer[Todo])
+                               todos: ListBuffer[Todo], repository: MongoTodoRepository)(implicit ec: ExecutionContext)
     extends BaseController {
 
   private implicit val todoWrites = Json.writes[Todo]
   private implicit val createTodoReads = Json.reads[CreateTodoRequest]
 
-  val list: Action[AnyContent] = Action {
-    Ok(Json.toJson(todos))
+  val list: Action[AnyContent] = Action.async {
+    val result: Future[Result] = repository.list().map { todo =>
+      Ok(Json.toJson(todo))
+    }
+    result
   }
 
   val create: Action[JsValue] = Action(parse.json) { request =>

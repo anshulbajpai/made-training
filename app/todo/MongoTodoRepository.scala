@@ -6,6 +6,7 @@ import reactivemongo.api.commands.FindAndModifyCommand
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats._
 
+import java.util.UUID
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -18,13 +19,16 @@ class MongoTodoRepository @Inject() (mongoComponent: ReactiveMongoComponent)(imp
       idFormat = Format(Reads.StringReads, Writes.StringWrites)
     ) {
 
-  def list(): Future[List[Todo]] = ???
+  def list(): Future[List[Todo]] = findAll()
 
-  def get(id: String): Future[Option[Todo]] = ???
+  def get(id: String): Future[Option[Todo]] = findById(id)
 
-  def delete(id: String): Future[Boolean] = ???
+  def delete(id: String): Future[Boolean] = removeById(id).map(_.n == 1)
 
-  def create(title: String, description: String): Future[String] = ???
+  def create(title: String, description: String): Future[String] = {
+    val id = UUID.randomUUID().toString
+    insert(Todo(id, title, description)).map(_ => id)
+  }
 
   def update(toBeModified: Todo): Future[Boolean] = {
 
