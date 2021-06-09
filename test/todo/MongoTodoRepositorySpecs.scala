@@ -46,4 +46,36 @@ class MongoTodoRepositorySpecs
     }
   }
 
+  "get" must {
+    "return an Option of None if doesn't exist" in {
+      val todoId = randomUUID().toString
+
+      val result = repo.get(todoId).futureValue
+      result mustBe None
+    }
+
+    "return an Option of Todo if does exist" in {
+      val todoId = randomUUID().toString
+      val expectedTodo = Todo(todoId, "old title", "old description")
+      repo.insert(expectedTodo).futureValue
+
+      val result = repo.get(todoId).futureValue
+      result mustBe Some(expectedTodo)
+    }
+
+    "returns correct Todo based on ID" in {
+      val wantedTodoId = randomUUID().toString
+      val expectedTodo = Todo(wantedTodoId, "old title", "old description")
+      val notWantedTodo = Todo(randomUUID().toString, "old title", "old description")
+
+      repo.insert(expectedTodo).futureValue
+      repo.insert(notWantedTodo).futureValue
+
+      val result = repo.get(wantedTodoId).futureValue
+
+      result mustBe Some(expectedTodo)
+      result mustNot be(Some(notWantedTodo))
+    }
+  }
+
 }

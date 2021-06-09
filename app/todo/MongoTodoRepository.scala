@@ -20,7 +20,7 @@ class MongoTodoRepository @Inject() (mongoComponent: ReactiveMongoComponent)(imp
 
   def list(): Future[List[Todo]] = ???
 
-  def get(id: String): Future[Option[Todo]] = ???
+  def get(id: String): Future[Option[Todo]] = findById(id)
 
   def delete(id: String): Future[Boolean] = ???
 
