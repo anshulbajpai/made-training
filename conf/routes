@@ -4,7 +4,12 @@
 # ~~~~
 
 # An example controller showing a sample home page
+->         /govuk-frontend                     govuk.Routes
+->         /hmrc-frontend                      hmrcfrontend.Routes
+
+
 GET     /                          controllers.HomeController.index()
+
 
 GET     /api/todos                 todo.TodoController.list
 GET     /api/todos/:id             todo.TodoController.get(id)

@@ -1,15 +1,17 @@
 package controllers
 
-import javax.inject._
-import play.api._
+import play.api.i18n.I18nSupport
 import play.api.mvc._
+import views.html.index
+
+import javax.inject._
 
 /**
  * This controller creates an `Action` to handle HTTP requests to the
  * application's home page.
  */
 @Singleton
-class HomeController @Inject()(val controllerComponents: ControllerComponents) extends BaseController {
+class HomeController @Inject()(val controllerComponents: ControllerComponents, indexView: index) extends BaseController with I18nSupport {
 
 
   /**
@@ -20,7 +22,6 @@ class HomeController @Inject()(val controllerComponents: ControllerComponents) e
    * a path of `/`.
    */
   def index(): Action[AnyContent] = Action { implicit request: Request[AnyContent] =>
-    val result: Result = Ok(views.html.index())
-    result
+    Ok(indexView())
   }
 }
