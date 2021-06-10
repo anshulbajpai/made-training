@@ -163,9 +163,11 @@ class TodoControllerSpec extends WordSpec with MustMatchers with OptionValues wi
         "description" -> "updated description"
       )
 
-      when(mockRepo.update(Todo(randomUUID().toString, "don't care", "don't care"))).thenReturn(Future.successful(false))
+      val todoId = randomUUID().toString
 
-      val response = controller.update(randomUUID().toString)(FakeRequest().withBody(updateJson))
+      when(mockRepo.update(Todo(todoId, "updated title", "updated description"))).thenReturn(Future.successful(false))
+
+      val response = controller.update(todoId)(FakeRequest().withBody(updateJson))
 
       status(response) mustBe NOT_FOUND
     }
