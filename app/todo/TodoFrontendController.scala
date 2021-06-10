@@ -1,21 +1,22 @@
 package todo
 
-import play.api.mvc.{BaseController, ControllerComponents}
+import play.api.mvc.MessagesControllerComponents
 import todo.html.{ListTodoView, TodoView}
+import uk.gov.hmrc.play.bootstrap.frontend.controller.FrontendController
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.ExecutionContext
 
 @Singleton
 class TodoFrontendController @Inject()(
-  val controllerComponents: ControllerComponents,
+  messagesControllerComponents: MessagesControllerComponents,
   todoApiConnector: TodoApiConnector,
   todoView: TodoView,
   listTodoView: ListTodoView
 )(implicit ec: ExecutionContext)
-    extends BaseController {
+    extends FrontendController(messagesControllerComponents) {
 
-  val list = Action.async {
+  val list = Action.async { implicit request =>
     todoApiConnector.list().map(todos => Ok(listTodoView(todos)))
   }
 
